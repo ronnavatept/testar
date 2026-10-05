@@ -258,16 +258,17 @@
 
           el.object3D.position.lerpVectors(start, target, eased);
 
-          // หมุนกลับมาตรงเมื่อเข้าตำแหน่ง
+          // หมุนให้กลับมาอยู่ในระนาบเดียวกับ Hiro Marker โดยคว่ำ/หงายให้ถูกทิศ
           el.object3D.rotation.x = startRot.x * (1 - eased);
           el.object3D.rotation.y = startRot.y * (1 - eased);
-          el.object3D.rotation.z = startRot.z * (1 - eased);
+          el.object3D.rotation.z =
+            startRot.z * (1 - eased) + THREE.MathUtils.degToRad(180) * eased;
 
           if (progress < 1) {
             requestAnimationFrame(step);
           } else {
             el.object3D.position.copy(target);
-            el.object3D.rotation.set(0, 0, 0);
+            el.object3D.rotation.set(0, 0, THREE.MathUtils.degToRad(180));
             resolve();
           }
         }
@@ -428,7 +429,7 @@
 
         letters.forEach((letter, index) => {
           letter.object3D.position.set(...startPositions[index]);
-          letter.object3D.rotation.set(0, 0, 0);
+          letter.object3D.rotation.set(0, 0, THREE.MathUtils.degToRad(180));
         });
 
         const sparkleRoot = document.querySelector('#sparkle-root');
@@ -499,7 +500,8 @@
         position="-0.95 0.85 0.10"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#00e5ff"
         side="double"
         floating-letter="index: 0; speed: 1.15; radius: 0.22"
@@ -511,7 +513,8 @@
         position="-0.55 1.02 -0.18"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#7c4dff"
         side="double"
         floating-letter="index: 1; speed: 0.95; radius: 0.28"
@@ -523,7 +526,8 @@
         position="-0.18 0.68 0.22"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#ffea00"
         side="double"
         floating-letter="index: 2; speed: 1.30; radius: 0.24"
@@ -535,7 +539,8 @@
         position="0.12 1.08 -0.12"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#ffffff"
         side="double"
         floating-letter="index: 3; speed: 0.80; radius: 0.20"
@@ -547,7 +552,8 @@
         position="0.48 0.70 0.20"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#69f0ae"
         side="double"
         floating-letter="index: 4; speed: 1.10; radius: 0.30"
@@ -559,7 +565,8 @@
         position="0.82 1.03 -0.18"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#ff80ab"
         side="double"
         floating-letter="index: 5; speed: 1.25; radius: 0.23"
@@ -571,7 +578,8 @@
         position="1.02 0.78 0.12"
         align="center"
         baseline="center"
-        width="20"
+        rotation="0 0 180"
+        width="100.0"
         color="#ff9100"
         side="double"
         floating-letter="index: 6; speed: 0.90; radius: 0.27"
