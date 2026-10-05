@@ -92,6 +92,13 @@
       color: #111;
     }
 
+    #explode-button {
+      display: none;
+      background: linear-gradient(135deg, #ff5252, #ff1744);
+      color: #fff;
+      min-width: 190px;
+    }
+
     button:disabled {
       opacity: .5;
       cursor: default;
@@ -136,7 +143,7 @@
         const data = this.data;
         const t = (time + this.startTime) * 0.001;
 
-        if (window.arLettersArranging) return;
+        if (window.arLettersArranging || window.arSuccess || window.arExploded) return;
 
         const i = data.index;
         const phase = i * 0.92;
@@ -269,15 +276,75 @@
       });
     }
 
+    AFRAME.registerComponent('explosion-particle', {
+      init: function () {
+        this.life = 0;
+        this.duration = 650 + Math.random() * 500;
+        const v = new THREE.Vector3(
+          (Math.random() - 0.5) * 3.8,
+          (Math.random() - 0.1) * 3.0,
+          (Math.random() - 0.5) * 3.8
+        );
+        this.velocity = v;
+      },
+      tick: function (_time, deltaMs) {
+        this.life += deltaMs;
+        const dt = deltaMs / 1000;
+        this.el.object3D.position.addScaledVector(this.velocity, dt);
+        this.velocity.multiplyScalar(0.985);
+        this.velocity.y -= 1.4 * dt;
+        const progress = Math.min(this.life / this.duration, 1);
+        this.el.object3D.scale.setScalar(Math.max(0, 1 - progress));
+        if (progress >= 1 && this.el.parentNode) this.el.parentNode.removeChild(this.el);
+      }
+    });
+
+    function explodeLetters() {
+      if (window.arExploded) return;
+      window.arExploded = true;
+      const sparkleRoot = document.querySelector('#sparkle-root');
+      const colors = ['#ffffff','#00e5ff','#7c4dff','#ffea00','#ff80ab','#69f0ae','#ff5252'];
+      letters.forEach((letter, i) => {
+        const origin = letter.object3D.position.clone();
+        for (let j = 0; j < 10; j++) {
+          const particle = document.createElement('a-sphere');
+          particle.setAttribute('radius', 0.025 + Math.random() * 0.035);
+          particle.setAttribute('position', origin);
+          const c = colors[(i + j) % colors.length];
+          particle.setAttribute('material', `color:${c}; emissive:${c}; emissiveIntensity:3`);
+          particle.setAttribute('explosion-particle', '');
+          sparkleRoot.appendChild(particle);
+        }
+      });
+
+      letters.forEach((letter, i) => {
+        const dir = new THREE.Vector3(
+          (i - 3) * 0.65 + (Math.random()-0.5)*0.35,
+          0.5 + Math.random()*0.7,
+          (Math.random()-0.5)*0.8
+        );
+        const target = letter.object3D.position.clone().add(dir);
+        animateToPosition(letter, target, 500 + i * 25);
+      });
+
+      topPanel.innerHTML = `
+        <div id="title">BOOM! DGF - WHP</div>
+        <span class="hint">ระเบิดออกแล้วค่ะ</span>
+      `;
+      document.querySelector('#explode-button').disabled = true;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       const marker = document.querySelector('#hiro-marker');
       const topPanel = document.querySelector('#top-panel');
       const arrangeButton = document.querySelector('#arrange-button');
       const resetButton = document.querySelector('#reset-button');
+      const explodeButton = document.querySelector('#explode-button');
       const letters = Array.from(document.querySelectorAll('.ar-letter'));
 
       window.arLettersArranging = false;
       window.arSuccess = false;
+      window.arExploded = false;
 
       marker.addEventListener('markerFound', () => {
         topPanel.innerHTML = `
@@ -296,7 +363,7 @@
       });
 
       arrangeButton.addEventListener('click', async () => {
-        if (window.arLettersArranging) return;
+        if (window.arLettersArranging || window.arSuccess || window.arExploded) return;
 
         window.arLettersArranging = true;
         window.arSuccess = false;
@@ -313,7 +380,7 @@
          * ตำแหน่งปลายทาง
          * D  G  F  -  W  H  P
          */
-        const targetX = [-0.72, -0.48, -0.24, 0.02, 0.30, 0.54, 0.78];
+        const targetX = [-2.40, -1.60, -0.80, 0.00, 0.95, 1.80, 2.65];
 
         const animations = letters.map((letter, index) => {
           const target = new THREE.Vector3(
@@ -332,18 +399,22 @@
 
         topPanel.innerHTML = `
           <div id="title">สำเร็จ! DGF - WHP</div>
-          <span class="hint">เรียงตัวอักษรถูกต้องแล้วค่ะ ✨</span>
+          <span class="hint">เรียงตัวอักษรถูกต้องแล้ว — ค้างไว้จนกด “ระเบิดออก!” ค่ะ ✨</span>
         `;
 
         arrangeButton.textContent = 'เรียงสำเร็จแล้ว';
-        resetButton.style.display = 'block';
+        resetButton.style.display = 'none';
+        explodeButton.style.display = 'block';
 
         createSparkles();
       });
 
+      explodeButton.addEventListener('click', explodeLetters);
+
       resetButton.addEventListener('click', () => {
         window.arSuccess = false;
         window.arLettersArranging = false;
+        window.arExploded = false;
 
         const startPositions = [
           [-0.95, 0.85, 0.10],
@@ -366,6 +437,8 @@
         arrangeButton.disabled = false;
         arrangeButton.textContent = 'จัดเรียง DGF - WHP';
         resetButton.style.display = 'none';
+        explodeButton.style.display = 'none';
+        explodeButton.disabled = false;
 
         topPanel.innerHTML = `
           <div id="title">แยกตัวอักษรอีกครั้ง</div>
@@ -386,6 +459,10 @@
   <div id="controls">
     <button id="arrange-button" class="hidden" type="button">
       จัดเรียง DGF - WHP
+    </button>
+
+    <button id="explode-button" type="button">
+      ระเบิดออก!
     </button>
 
     <button id="reset-button" type="button">
@@ -422,7 +499,7 @@
         position="-0.95 0.85 0.10"
         align="center"
         baseline="center"
-        width="1.8"
+        width="20"
         color="#00e5ff"
         side="double"
         floating-letter="index: 0; speed: 1.15; radius: 0.22"
@@ -434,7 +511,7 @@
         position="-0.55 1.02 -0.18"
         align="center"
         baseline="center"
-        width="1.8"
+        width="20"
         color="#7c4dff"
         side="double"
         floating-letter="index: 1; speed: 0.95; radius: 0.28"
@@ -446,7 +523,7 @@
         position="-0.18 0.68 0.22"
         align="center"
         baseline="center"
-        width="1.8"
+        width="20"
         color="#ffea00"
         side="double"
         floating-letter="index: 2; speed: 1.30; radius: 0.24"
@@ -458,7 +535,7 @@
         position="0.12 1.08 -0.12"
         align="center"
         baseline="center"
-        width="1.5"
+        width="20"
         color="#ffffff"
         side="double"
         floating-letter="index: 3; speed: 0.80; radius: 0.20"
@@ -470,7 +547,7 @@
         position="0.48 0.70 0.20"
         align="center"
         baseline="center"
-        width="1.8"
+        width="20"
         color="#69f0ae"
         side="double"
         floating-letter="index: 4; speed: 1.10; radius: 0.30"
@@ -482,7 +559,7 @@
         position="0.82 1.03 -0.18"
         align="center"
         baseline="center"
-        width="1.8"
+        width="20"
         color="#ff80ab"
         side="double"
         floating-letter="index: 5; speed: 1.25; radius: 0.23"
@@ -494,7 +571,7 @@
         position="1.02 0.78 0.12"
         align="center"
         baseline="center"
-        width="1.8"
+        width="20"
         color="#ff9100"
         side="double"
         floating-letter="index: 6; speed: 0.90; radius: 0.27"
